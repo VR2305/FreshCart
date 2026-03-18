@@ -4,6 +4,20 @@
    Bottom-sheet cart · Per-category accents
    ═══════════════════════════════════════════ */
 
+class UiIcon extends HTMLElement {
+  connectedCallback() {
+    const name = this.getAttribute('name');
+    if (name) {
+      this.innerHTML = `<iconify-icon icon="lucide:${name}"></iconify-icon>`;
+      this.style.display = 'inline-flex';
+      this.style.alignItems = 'center';
+      this.style.justifyContent = 'center';
+      this.style.fontSize = 'inherit';
+    }
+  }
+}
+customElements.define('ui-icon', UiIcon);
+
 /* ── STATE ── */
 const state = {
   products: [],         // currently displayed products
@@ -21,13 +35,13 @@ const API = '';
 
 /* ── CATEGORY CONFIG (accent theme per tab) ── */
 const CAT_CFG = {
-  'All':        { emoji: '🏪', label: 'All Items',          chip: '🛒 All Fresh Picks' },
-  'Bakery':     { emoji: '🥐', label: 'Bakery',             chip: '🥐 Fresh Bakery Picks' },
-  'Beverages':  { emoji: '☕', label: 'Beverages',          chip: '🥤 Chilled Beverages' },
-  'Dairy':      { emoji: '🧀', label: 'Dairy',              chip: '🥛 Farm Fresh Dairy' },
-  'Fruits':     { emoji: '🍎', label: 'Fruits',             chip: '🍎 Fresh Fruits' },
-  'Snacks':     { emoji: '🍫', label: 'Snacks',             chip: '😋 Top Snacks' },
-  'Vegetables': { emoji: '🥦', label: 'Vegetables',         chip: '🥦 Farm Vegetables' },
+  'All':        { emoji: '<ui-icon name="layout-grid"></ui-icon>', label: 'All Items',          chip: '<ui-icon name="shopping-bag" style="margin-right:6px;font-size:16px"></ui-icon> All Fresh Picks' },
+  'Bakery':     { emoji: '<ui-icon name="croissant"></ui-icon>', label: 'Bakery',             chip: '<ui-icon name="croissant" style="margin-right:6px;font-size:16px"></ui-icon> Fresh Bakery Picks' },
+  'Beverages':  { emoji: '<ui-icon name="coffee"></ui-icon>', label: 'Beverages',          chip: '<ui-icon name="coffee" style="margin-right:6px;font-size:16px"></ui-icon> Chilled Beverages' },
+  'Dairy':      { emoji: '<ui-icon name="milk"></ui-icon>', label: 'Dairy',              chip: '<ui-icon name="milk" style="margin-right:6px;font-size:16px"></ui-icon> Farm Fresh Dairy' },
+  'Fruits':     { emoji: '<ui-icon name="apple"></ui-icon>', label: 'Fruits',             chip: '<ui-icon name="apple" style="margin-right:6px;font-size:16px"></ui-icon> Fresh Fruits' },
+  'Snacks':     { emoji: '<ui-icon name="candy"></ui-icon>', label: 'Snacks',             chip: '<ui-icon name="candy" style="margin-right:6px;font-size:16px"></ui-icon> Top Snacks' },
+  'Vegetables': { emoji: '<ui-icon name="carrot"></ui-icon>', label: 'Vegetables',         chip: '<ui-icon name="carrot" style="margin-right:6px;font-size:16px"></ui-icon> Farm Vegetables' },
 };
 
 /* ── INIT ── */
@@ -44,6 +58,27 @@ async function loadApp() {
   showSkeletons(6);
   await Promise.all([loadCategories(), loadCart()]);
   await loadProducts();
+  detectLocation();
+}
+
+function detectLocation() {
+  const titleEl = document.getElementById('deliver-title');
+  const subEl = document.getElementById('deliver-subtitle');
+  if (navigator.geolocation) {
+    navigator.geolocation.getCurrentPosition(async pos => {
+      try {
+        const res = await fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${pos.coords.latitude}&lon=${pos.coords.longitude}`);
+        const data = await res.json();
+        const area = data.address.suburb || data.address.neighbourhood || data.address.city || 'your area';
+        if (titleEl) titleEl.innerHTML = `DELIVER TO ${area}`;
+        if (subEl) subEl.innerHTML = `Delivering to ${area} - As soon as possible`;
+      } catch (e) {
+        if (subEl) subEl.innerHTML = `Delivering to your location - As soon as possible`;
+      }
+    }, () => {
+        if (subEl) subEl.innerHTML = `Delivering to your location - As soon as possible`;
+    });
+  }
 }
 
 /* ── CLOCK ── */
@@ -103,7 +138,7 @@ function renderTabs() {
   const rail = document.getElementById('tabs-scroll');
   const cats = ['All', ...state.categories];
   rail.innerHTML = cats.map(c => {
-    const cfg = CAT_CFG[c] || { emoji: '📦', label: c };
+    const cfg = CAT_CFG[c] || { emoji: '<ui-icon name="package"></ui-icon>', label: c };
     return `
       <button class="tab-pill ${state.currentCategory === c ? 'active' : ''}"
         id="tab-${c.replace(/\s/g,'_')}"
@@ -131,7 +166,7 @@ function switchCategory(cat) {
 
   // Update header chip
   const cfg = CAT_CFG[cat] || { chip: cat };
-  document.getElementById('category-header-chip').textContent = cfg.chip;
+  document.getElementById('category-header-chip').innerHTML = cfg.chip;
 
   // Animate content
   const ca = document.getElementById('content-area');
@@ -146,7 +181,7 @@ function switchCategory(cat) {
 
 function initCategoryHeader() {
   const cfg = CAT_CFG[state.currentCategory] || { chip: state.currentCategory };
-  document.getElementById('category-header-chip').textContent = cfg.chip;
+  document.getElementById('category-header-chip').innerHTML = cfg.chip;
   applyTabTheme(state.currentCategory);
 }
 
@@ -202,22 +237,23 @@ function renderProducts() {
     const qty = ci ? ci.quantity : 0;
     const showDisc = p.discount > 0;
     const showTop = p.rating >= 4.8;
+    const catIcon = CAT_CFG[p.category] ? CAT_CFG[p.category].emoji : '<ui-icon name="package"></ui-icon>';
 
     return `
       <div class="product-card" style="animation-delay:${i * 0.035}s">
         <div class="product-img-wrap">
           ${showDisc ? `<span class="badge-discount">-${p.discount}%</span>` : ''}
-          ${showTop ? `<span class="badge-top-rated">⭐ Top Pick</span>` : ''}
+          ${showTop ? `<span class="badge-top-rated"><ui-icon name="star" style="vertical-align:-2px;margin-right:2px"></ui-icon> Top Pick</span>` : ''}
           ${p.imageUrl
             ? `<img src="${p.imageUrl}" alt="${p.name}" loading="lazy" onerror="this.style.display='none';this.nextElementSibling.style.display='flex'">`
             : ''}
-          <span class="product-emoji-fb" style="${p.imageUrl ? 'display:none' : ''}">${p.image}</span>
+          <span class="product-emoji-fb" style="${p.imageUrl ? 'display:none' : ''}; font-size:40px; color:var(--text-muted); display:flex; align-items:center; justify-content:center;">${catIcon}</span>
         </div>
         <div class="product-body">
           <div class="product-cat-label">${p.category}</div>
           <div class="product-name">${p.name}</div>
           <div class="product-desc">${p.description}</div>
-          <div class="product-rating-pill">⭐ ${p.rating}</div>
+          <div class="product-rating-pill"><ui-icon name="star" style="vertical-align:-1px;margin-right:2px;font-size:12px"></ui-icon> ${p.rating}</div>
           <div class="product-price-row">
             <span class="price-current">$${effP.toFixed(2)}</span>
             ${showDisc ? `<span class="price-old">$${p.price.toFixed(2)}</span>` : ''}
@@ -294,7 +330,7 @@ async function addToCart(pid, btn) {
     updateCartUI();
     renderProducts();
     const p = state.products.find(x => x.id === pid);
-    showToast(`${p?.image || '🛒'} <b>${p?.name || 'Item'}</b> added!`);
+    showToast(`<ui-icon name="check-circle" style="color:var(--primary);margin-right:6px;vertical-align:middle;"></ui-icon> <b>${p?.name || 'Item'}</b> added!`);
   } else {
     if (btn) { btn.innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" width="13" height="13"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg> Add'; btn.disabled = false; }
   }
@@ -308,7 +344,7 @@ async function updateQty(pid, qty) {
 
 async function removeItem(pid) {
   const res = await apiDelete(`/api/cart/items/${pid}`);
-  if (res.success) { state.cart = res.data; updateCartUI(); renderProducts(); renderSheetItems(); showToast('🗑️ Item removed'); }
+  if (res.success) { state.cart = res.data; updateCartUI(); renderProducts(); renderSheetItems(); showToast('<ui-icon name="trash-2" style="margin-right:6px;vertical-align:middle;"></ui-icon> Item removed'); }
 }
 
 function updateCartUI() {
@@ -367,10 +403,10 @@ function renderSheetItems() {
 
   itemsEl.innerHTML = state.cart.items.map(item => `
     <div class="sheet-item">
-      <div class="sheet-item-img">
+      <div class="sheet-item-img" style="display:flex;align-items:center;justify-content:center;font-size:32px;">
         ${item.product.imageUrl
           ? `<img src="${item.product.imageUrl}" alt="${item.product.name}" loading="lazy">`
-          : item.product.image}
+          : (CAT_CFG[item.product.category] ? CAT_CFG[item.product.category].emoji : '<ui-icon name="package"></ui-icon>')}
       </div>
       <div class="sheet-item-info">
         <div class="sheet-item-name">${item.product.name}</div>
@@ -421,8 +457,8 @@ function renderCheckoutSummary() {
     </div>
     ${state.cart.items.map(item => `
       <div class="co-item">
-        <div class="co-item-img">
-          ${item.product.imageUrl ? `<img src="${item.product.imageUrl}" alt="${item.product.name}">` : item.product.image}
+        <div class="co-item-img" style="display:flex;align-items:center;justify-content:center;font-size:24px;">
+          ${item.product.imageUrl ? `<img src="${item.product.imageUrl}" alt="${item.product.name}">` : (CAT_CFG[item.product.category] ? CAT_CFG[item.product.category].emoji : '<ui-icon name="package"></ui-icon>')}
         </div>
         <div class="co-item-name">${item.product.name}</div>
         <div class="co-item-qty">×${item.quantity}</div>
@@ -476,17 +512,17 @@ function showConfirmation(order) {
   const date = new Date(order.createdAt).toLocaleDateString('en-IN', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
   const payLabels = { cash: 'Cash on Delivery', upi: 'UPI / GPay', card: 'Debit / Credit Card' };
   document.getElementById('confirmation-wrap').innerHTML = `
-    <div class="conf-icon">✅</div>
+    <div class="conf-icon" style="color:var(--primary)"><ui-icon name="check-circle" style="font-size:48px"></ui-icon></div>
     <div class="conf-title">Order Confirmed!</div>
     <div class="conf-msg">Thank you, <b>${order.customerName}</b>! Your groceries are on their way.</div>
-    <div class="conf-eta">⚡ Arriving in <b>~30 minutes</b></div>
+    <div class="conf-eta"><ui-icon name="clock" style="vertical-align:middle;margin-right:4px"></ui-icon> Arriving <b>as soon as possible</b></div>
     <div class="conf-details">
       <div class="conf-row"><span>Order ID</span><span style="font-family:monospace">#${order.id.slice(0,8).toUpperCase()}</span></div>
       <div class="conf-row"><span>Date</span><span>${date}</span></div>
       <div class="conf-row"><span>Items</span><span>${order.items.length} product${order.items.length > 1 ? 's' : ''}</span></div>
       <div class="conf-row"><span>Payment</span><span>${payLabels[order.paymentMethod] || order.paymentMethod}</span></div>
-      <div class="conf-row"><span>Delivery</span><span style="color:#16a34a">Free · ~30 min ⚡</span></div>
-      ${order.savings > 0 ? `<div class="conf-row"><span>🎉 You Saved</span><span style="color:#d97706;font-weight:800">$${order.savings.toFixed(2)}</span></div>` : ''}
+      <div class="conf-row"><span>Delivery</span><span style="color:#16a34a">Free · ASAP <ui-icon name="zap" style="vertical-align:-2px"></ui-icon></span></div>
+      ${order.savings > 0 ? `<div class="conf-row"><span><ui-icon name="gift" style="vertical-align:-2px;margin-right:2px;font-size:14px"></ui-icon> You Saved</span><span style="color:#d97706;font-weight:800">$${order.savings.toFixed(2)}</span></div>` : ''}
       <div class="conf-row total-row"><span>Total Paid</span><span>$${order.total.toFixed(2)}</span></div>
     </div>
     <div class="conf-actions">
@@ -517,7 +553,7 @@ function renderOrders(orders) {
           </span>
         </div>
         <div class="order-chips">
-          ${order.items.map(i => `<span class="order-chip">${i.image} ${i.name} ×${i.quantity}</span>`).join('')}
+          ${order.items.map(i => `<span class="order-chip"><ui-icon name="package" style="margin-right:4px"></ui-icon> ${i.name} ×${i.quantity}</span>`).join('')}
         </div>
         <div class="order-foot">
           <span>${date}</span>
