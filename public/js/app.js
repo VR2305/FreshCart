@@ -52,7 +52,20 @@ document.addEventListener('DOMContentLoaded', () => {
   setupSearch();
   setupPaymentOptions();
   loadApp();
+  startSearchAnimation();
 });
+
+function startSearchAnimation() {
+  const keywords = ['fruits', 'milk', 'snacks under ₹100', 'bread', 'vegetables', 'beverages', 'top-rated items', 'fresh dairy'];
+  let kIdx = 0;
+  setInterval(() => {
+    const el = document.getElementById('search-input');
+    if (el && document.activeElement !== el && !state.searchTerm) {
+      el.setAttribute('placeholder', 'Search for ' + keywords[kIdx] + '…');
+      kIdx = (kIdx + 1) % keywords.length;
+    }
+  }, 1500);
+}
 
 async function loadApp() {
   showSkeletons(6);
@@ -69,14 +82,14 @@ function detectLocation() {
       try {
         const res = await fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${pos.coords.latitude}&lon=${pos.coords.longitude}`);
         const data = await res.json();
-        const area = data.address.suburb || data.address.neighbourhood || data.address.city || 'your area';
+        const area = data.address.suburb || data.address.neighbourhood || data.address.city || 'Kodambakkam, Chennai';
         if (titleEl) titleEl.innerHTML = `DELIVER TO ${area}`;
         if (subEl) subEl.innerHTML = `Delivering to ${area} - As soon as possible`;
       } catch (e) {
-        if (subEl) subEl.innerHTML = `Delivering to your location - As soon as possible`;
+        if (subEl) subEl.innerHTML = `Delivering to Kodambakkam, Chennai - As soon as possible`;
       }
     }, () => {
-        if (subEl) subEl.innerHTML = `Delivering to your location - As soon as possible`;
+        if (subEl) subEl.innerHTML = `Delivering to Kodambakkam, Chennai - As soon as possible`;
     });
   }
 }
@@ -225,6 +238,10 @@ function renderProducts() {
 
   if (state.products.length === 0) {
     grid.innerHTML = '';
+    const emptySub = document.getElementById('empty-search-sub');
+    if (emptySub) {
+      emptySub.innerHTML = `No items found for '${state.searchTerm}'.<br>Try searching for 'milk', 'bread', or 'snacks under ₹100'.`;
+    }
     empty.classList.remove('hidden');
     return;
   }
@@ -249,28 +266,40 @@ function renderProducts() {
             : ''}
           <span class="product-emoji-fb" style="${p.imageUrl ? 'display:none' : ''}; font-size:40px; color:var(--text-muted); display:flex; align-items:center; justify-content:center;">${catIcon}</span>
         </div>
-        <div class="product-body">
-          <div class="product-cat-label">${p.category}</div>
-          <div class="product-name">${p.name}</div>
-          <div class="product-desc">${p.description}</div>
-          <div class="product-rating-pill"><ui-icon name="star" style="vertical-align:-1px;margin-right:2px;font-size:12px"></ui-icon> ${p.rating}</div>
-          <div class="product-price-row">
-            <span class="price-current">$${effP.toFixed(2)}</span>
-            ${showDisc ? `<span class="price-old">$${p.price.toFixed(2)}</span>` : ''}
-            <span class="price-unit" style="font-size:10px;color:var(--text-muted)">/${p.unit}</span>
-            ${showDisc ? `<span class="price-save">Save $${saving}</span>` : ''}
+        <div class="product-body" style="display:flex; flex-direction:column; flex:1;">
+          <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:4px">
+            <div style="display:flex; gap:6px;">
+              ${showDisc ? `<span style="background:var(--cat-accent);color:#fff;font-size:10px;font-weight:800;padding:2px 6px;border-radius:6px;line-height:1">- ${p.discount}%</span>` : ''}
+              ${showTop ? `<span style="background:rgba(22,163,74,0.1);color:#16a34a;font-size:10px;font-weight:800;padding:2px 6px;border-radius:6px;line-height:1">Top Pick</span>` : ''}
+            </div>
+            <div style="font-size:11px; font-weight:700; color:var(--text-3); display:flex; align-items:center;"><ui-icon name="star" style="font-size:10px; margin-right:2px; color:#d97706"></ui-icon> ${p.rating}</div>
           </div>
-          <div class="card-action">
-            ${qty > 0
-              ? `<div class="qty-stepper" id="stepper-${p.id}">
-                  <button onclick="updateQty('${p.id}',${qty - 1})">−</button>
-                  <span class="qty-val">${qty}</span>
-                  <button onclick="updateQty('${p.id}',${qty + 1})">+</button>
-                </div>`
-              : `<button class="btn-add" id="add-btn-${p.id}" onclick="addToCart('${p.id}', this)">
-                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
-                  Add
-                </button>`}
+          <div class="product-cat-label" style="margin-bottom:2px">${p.category}</div>
+          <div class="product-name" style="font-size:14px; margin-bottom:4px">${p.name}</div>
+          <div class="product-desc" style="flex:1;">${p.description}</div>
+          <div class="product-price-row" style="display:flex; justify-content:space-between; align-items:flex-end; margin-top:auto;">
+            <div style="display:flex; flex-direction:column;">
+              <div style="display:flex; align-items:baseline; gap:4px">
+                <span class="price-current">₹${effP.toFixed(2)}</span>
+                <span class="price-unit" style="font-size:10px;color:var(--text-muted)">/${p.unit}</span>
+              </div>
+              ${showDisc ? `<div style="display:flex; align-items:center; gap:4px; margin-top:2px;">
+                <span class="price-old" style="font-size:10px; color:var(--text-muted); text-decoration:line-through;">₹${p.price.toFixed(2)}</span>
+                <span class="price-save" style="font-size:9px; font-weight:700; color:var(--cat-accent);">Save ₹${saving}</span>
+              </div>` : ''}
+            </div>
+            
+            <div class="card-action" style="position:static; margin-bottom:0;">
+              ${qty > 0
+                ? `<div class="qty-stepper" id="stepper-${p.id}">
+                    <button onclick="updateQty('${p.id}',${qty - 1})">−</button>
+                    <span class="qty-val">${qty}</span>
+                    <button onclick="updateQty('${p.id}',${qty + 1})">+</button>
+                  </div>`
+                : `<button class="btn-add" id="add-btn-${p.id}" onclick="addToCart('${p.id}', this)" style="padding:6px 14px; border-radius:8px;">
+                    Add
+                  </button>`}
+            </div>
           </div>
         </div>
       </div>`;
@@ -330,7 +359,8 @@ async function addToCart(pid, btn) {
     updateCartUI();
     renderProducts();
     const p = state.products.find(x => x.id === pid);
-    showToast(`<ui-icon name="check-circle" style="color:var(--primary);margin-right:6px;vertical-align:middle;"></ui-icon> <b>${p?.name || 'Item'}</b> added!`);
+    showToast(`<ui-icon name="check-circle" style="color:var(--primary);margin-right:6px;vertical-align:middle;"></ui-icon> Added 1 <b>${p?.name || 'Item'}</b> to cart`);
+    animateCartIcon();
   } else {
     if (btn) { btn.innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" width="13" height="13"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg> Add'; btn.disabled = false; }
   }
@@ -347,6 +377,14 @@ async function removeItem(pid) {
   if (res.success) { state.cart = res.data; updateCartUI(); renderProducts(); renderSheetItems(); showToast('<ui-icon name="trash-2" style="margin-right:6px;vertical-align:middle;"></ui-icon> Item removed'); }
 }
 
+function animateCartIcon() {
+  const icon = document.getElementById('cart-icon-btn');
+  if (icon) {
+    icon.style.transform = 'scale(1.2) translateY(-2px)';
+    setTimeout(() => icon.style.transform = '', 200);
+  }
+}
+
 function updateCartUI() {
   const ct = state.cart?.itemCount || 0;
   const total = state.cart?.total || 0;
@@ -361,7 +399,7 @@ function updateCartUI() {
   if (ct > 0) {
     bar.classList.remove('hidden');
     document.getElementById('cart-bar-count').textContent = `${ct} item${ct !== 1 ? 's' : ''}`;
-    document.getElementById('cart-bar-total').textContent = `$${total.toFixed(2)}`;
+    document.getElementById('cart-bar-total').textContent = `₹${total.toFixed(2)}`;
   } else {
     bar.classList.add('hidden');
   }
@@ -410,7 +448,7 @@ function renderSheetItems() {
       </div>
       <div class="sheet-item-info">
         <div class="sheet-item-name">${item.product.name}</div>
-        <div class="sheet-item-price">$${item.effectivePrice.toFixed(2)} / ${item.product.unit}</div>
+        <div class="sheet-item-price">₹${item.effectivePrice.toFixed(2)} / ${item.product.unit}</div>
       </div>
       <div class="sheet-item-stepper">
         <button onclick="updateQty('${item.productId}', ${item.quantity - 1})">−</button>
@@ -424,12 +462,12 @@ function renderSheetItems() {
 
 function renderSheetTotals() {
   if (!state.cart) return;
-  document.getElementById('sheet-subtotal').textContent = `$${state.cart.subtotal.toFixed(2)}`;
-  document.getElementById('sheet-total').textContent = `$${state.cart.total.toFixed(2)}`;
+  document.getElementById('sheet-subtotal').textContent = `₹${state.cart.subtotal.toFixed(2)}`;
+  document.getElementById('sheet-total').textContent = `₹${state.cart.total.toFixed(2)}`;
   const sr = document.getElementById('sheet-savings-row');
   if (state.cart.savings > 0) {
     sr.classList.remove('hidden');
-    document.getElementById('sheet-savings').textContent = `-$${state.cart.savings.toFixed(2)}`;
+    document.getElementById('sheet-savings').textContent = `-₹${state.cart.savings.toFixed(2)}`;
   } else { sr.classList.add('hidden'); }
 }
 
@@ -462,10 +500,10 @@ function renderCheckoutSummary() {
         </div>
         <div class="co-item-name">${item.product.name}</div>
         <div class="co-item-qty">×${item.quantity}</div>
-        <div class="co-item-total">$${item.itemTotal.toFixed(2)}</div>
+        <div class="co-item-total">₹${item.itemTotal.toFixed(2)}</div>
       </div>`).join('')}
     <div style="display:flex;justify-content:space-between;padding:10px 0 0;border-top:1px solid var(--border);margin-top:8px;font-size:13px;font-weight:800;color:var(--text)">
-      <span>Total</span><span>$${state.cart.total.toFixed(2)}</span>
+      <span>Total</span><span>₹${state.cart.total.toFixed(2)}</span>
     </div>`;
 }
 
@@ -497,6 +535,7 @@ async function placeOrder(e) {
       state.cart = { items: [], subtotal: 0, total: 0, savings: 0, itemCount: 0 };
       updateCartUI();
       renderSheetItems();
+      renderProducts();
       showConfirmation(res.data);
       document.getElementById('checkout-form').reset();
       document.querySelectorAll('.pay-opt').forEach(o => o.classList.remove('selected'));
@@ -504,7 +543,7 @@ async function placeOrder(e) {
     } else { showToast('❌ ' + (res.error || 'Order failed')); }
   } catch { showToast('❌ Network error. Retry.'); }
   btn.disabled = false;
-  btn.innerHTML = '<span>Place Order</span><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="18" height="18"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>';
+  btn.innerHTML = '<span>Place Order</span><ui-icon name="chevron-right" style="margin-left:4px;font-size:16px"></ui-icon>';
 }
 
 function showConfirmation(order) {
@@ -522,8 +561,8 @@ function showConfirmation(order) {
       <div class="conf-row"><span>Items</span><span>${order.items.length} product${order.items.length > 1 ? 's' : ''}</span></div>
       <div class="conf-row"><span>Payment</span><span>${payLabels[order.paymentMethod] || order.paymentMethod}</span></div>
       <div class="conf-row"><span>Delivery</span><span style="color:#16a34a">Free · ASAP <ui-icon name="zap" style="vertical-align:-2px"></ui-icon></span></div>
-      ${order.savings > 0 ? `<div class="conf-row"><span><ui-icon name="gift" style="vertical-align:-2px;margin-right:2px;font-size:14px"></ui-icon> You Saved</span><span style="color:#d97706;font-weight:800">$${order.savings.toFixed(2)}</span></div>` : ''}
-      <div class="conf-row total-row"><span>Total Paid</span><span>$${order.total.toFixed(2)}</span></div>
+      ${order.savings > 0 ? `<div class="conf-row"><span><ui-icon name="gift" style="vertical-align:-2px;margin-right:2px;font-size:14px"></ui-icon> You Saved</span><span style="color:#d97706;font-weight:800">₹${order.savings.toFixed(2)}</span></div>` : ''}
+      <div class="conf-row total-row"><span>Total Paid</span><span>₹${order.total.toFixed(2)}</span></div>
     </div>
     <div class="conf-actions">
       <button class="btn-primary" onclick="switchScreen('browse')">Continue Shopping</button>
@@ -557,7 +596,7 @@ function renderOrders(orders) {
         </div>
         <div class="order-foot">
           <span>${date}</span>
-          <span class="order-total-val">$${order.total.toFixed(2)}</span>
+          <span class="order-total-val">₹${order.total.toFixed(2)}</span>
         </div>
       </div>`;
   }).join('');
