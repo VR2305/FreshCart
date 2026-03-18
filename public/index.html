@@ -1,9 +1,9 @@
 <!DOCTYPE html>
-<html lang="en" data-theme="dark">
+<html lang="en">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <meta name="description" content="FreshCart — Premium online grocery shopping.">
+  <meta name="description" content="FreshCart — Premium online grocery shopping. Browse fresh fruits, vegetables, dairy, bakery items, and more. Fast delivery, great prices.">
   <title>FreshCart — Fresh Groceries Delivered</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
@@ -13,33 +13,22 @@
   <!-- ═══════════ NAVBAR ═══════════ -->
   <nav class="navbar" id="navbar">
     <div class="nav-container">
-      <div class="nav-brand-area">
-        <a href="#" class="nav-logo" id="nav-logo" onclick="navigateTo('home')">
-          <span class="logo-icon">🥬</span>
-          <span class="logo-text">Fresh<span class="logo-accent">Cart</span></span>
-        </a>
-        <div class="location-selector" id="location-selector" onclick="openLocationModal()">
-          <div class="location-eta">⚡ 10 MINS</div>
-          <div class="location-address" id="nav-address-text">Select Location ▾</div>
-        </div>
+      <a href="#" class="nav-logo" id="nav-logo" onclick="navigateTo('home')">
+        <span class="logo-icon">🥬</span>
+        <span class="logo-text">Fresh<span class="logo-accent">Cart</span></span>
+      </a>
+      <div class="nav-search" id="nav-search">
+        <svg class="search-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
+        <input type="text" id="search-input" placeholder="Search for fruits, milk, snacks..." autocomplete="off">
+        <kbd class="search-kbd">ESC</kbd>
       </div>
-      
-      <div class="nav-search-wrapper" id="nav-search-wrapper">
-        <div class="nav-search" id="nav-search">
-          <svg class="search-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
-          <input type="text" id="search-input" placeholder="Search for groceries..." autocomplete="off">
-          <kbd class="search-kbd">ESC</kbd>
-        </div>
-        <div class="search-suggestions hidden" id="search-suggestions"></div>
-      </div>
-
       <div class="nav-actions">
-        <button class="nav-btn auth-btn" id="auth-btn" title="Login" onclick="handleAuthClick()">
-          <span id="auth-btn-text">Login</span>
-        </button>
         <button class="nav-btn theme-toggle" id="theme-toggle" title="Toggle theme">
           <svg class="icon-sun" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="5"/><path d="M12 1v2M12 21v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M1 12h2M21 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42"/></svg>
           <svg class="icon-moon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>
+        </button>
+        <button class="nav-btn orders-btn" id="orders-btn" title="My Orders" onclick="navigateTo('orders')">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></svg>
         </button>
         <button class="nav-btn cart-btn" id="cart-btn" title="Shopping Cart" onclick="toggleCart()">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="9" cy="21" r="1"/><circle cx="20" cy="21" r="1"/><path d="M1 1h4l2.68 13.39a2 2 0 0 0 2 1.61h9.72a2 2 0 0 0 2-1.61L23 6H6"/></svg>
@@ -54,36 +43,51 @@
 
     <!-- HOME VIEW -->
     <div class="view active" id="home-view">
-      <!-- Greeting -->
-      <section class="home-greeting" id="home-greeting">
-        <h2 id="greeting-title">Welcome to FreshCart!</h2>
-        <p>What are you looking for today?</p>
-      </section>
-
-      <!-- Categories -->
-      <section class="categories-section" id="categories-section">
-        <div class="categories-grid" id="categories-grid"></div>
-      </section>
-
-      <!-- Deals Section -->
-      <section class="products-section" id="deals-section">
-        <div class="section-header">
-          <h2 class="section-title">🔥 Trending Deals</h2>
+      <!-- Hero Section -->
+      <section class="hero" id="hero-section">
+        <div class="hero-bg-shapes">
+          <div class="shape shape-1"></div>
+          <div class="shape shape-2"></div>
+          <div class="shape shape-3"></div>
         </div>
-        <div class="products-horizontal-scroll" id="deals-grid"></div>
+        <div class="hero-content">
+          <div class="hero-badge">⚡ 10 Mins Delivery & Organic</div>
+          <h1 class="hero-title">
+            Groceries delivered<br>
+            <span class="hero-gradient">before you know it</span>
+          </h1>
+          <p class="hero-subtitle">Handpicked fresh produce, dairy, bakery & more — straight from farms to your doorstep. Quality guaranteed.</p>
+          <div class="hero-actions">
+            <button class="btn btn-primary btn-lg" onclick="document.getElementById('products-section').scrollIntoView({behavior:'smooth'})">
+              <span>Shop Now</span>
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="20" height="20"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
+            </button>
+            <button class="btn btn-ghost btn-lg" onclick="scrollToDeals()">
+              <span>🔥 View Deals</span>
+            </button>
+          </div>
+          <div class="hero-stats">
+            <div class="stat"><span class="stat-number">30+</span><span class="stat-label">Products</span></div>
+            <div class="stat-divider"></div>
+            <div class="stat"><span class="stat-number">6</span><span class="stat-label">Categories</span></div>
+            <div class="stat-divider"></div>
+            <div class="stat"><span class="stat-number">4.7</span><span class="stat-label">Avg Rating</span></div>
+          </div>
+        </div>
       </section>
 
       <!-- Products -->
       <section class="products-section" id="products-section">
         <div class="section-header">
           <div class="section-header-left">
-            <h2 class="section-title" id="products-title">Daily Essentials</h2>
+            <h2 class="section-title" id="products-title">All Products</h2>
+            <p class="section-subtitle" id="products-count"></p>
           </div>
           <div class="filter-tabs" id="filter-tabs"></div>
         </div>
         <div class="products-grid" id="products-grid"></div>
         <div class="empty-state hidden" id="empty-products">
-          <div class="empty-3d-icon">🔍</div>
+          <span class="empty-icon">🔍</span>
           <h3>No products found</h3>
           <p>Try a different search term or category</p>
           <button class="btn btn-primary" onclick="clearFilters()">Clear Filters</button>
@@ -96,80 +100,73 @@
       <div class="checkout-container">
         <button class="back-btn" onclick="navigateTo('home')">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="20" height="20"><path d="M19 12H5M12 19l-7-7 7-7"/></svg>
-          <span>Back</span>
+          <span>Continue Shopping</span>
         </button>
         <div class="checkout-grid">
-          <div class="checkout-main">
+          <div class="checkout-form-section">
             <h2 class="checkout-title">Checkout</h2>
-
-            <!-- 1. Address Selection -->
-            <div class="checkout-step" id="checkout-step-1">
-              <div class="step-header">
-                <div>
-                  <span class="step-num">1</span>
-                  <h3>Delivery Address</h3>
-                </div>
-                <button class="btn btn-sm btn-ghost" onclick="openLocationModal()">Change</button>
-              </div>
-              <div class="step-body" id="checkout-address-body">
-                <!-- Filled via JS -->
-              </div>
-            </div>
-
-            <!-- 2. Delivery Slot -->
-            <div class="checkout-step" id="checkout-step-2">
-              <div class="step-header">
-                <div>
-                  <span class="step-num">2</span>
-                  <h3>Delivery Slot</h3>
-                </div>
-              </div>
-              <div class="step-body">
-                <label class="delivery-slot-option selected">
-                  <div class="slot-info">
-                    <span class="slot-title">⚡ Instant Delivery</span>
-                    <span class="slot-desc">ETA: 10 - 15 mins</span>
+            <form id="checkout-form" onsubmit="placeOrder(event)">
+              <div class="form-section">
+                <h3 class="form-section-title">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="20" height="20"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+                  Contact Details
+                </h3>
+                <div class="form-row">
+                  <div class="form-group">
+                    <label for="customer-name">Full Name *</label>
+                    <input type="text" id="customer-name" name="customerName" required placeholder="John Doe">
                   </div>
-                  <input type="radio" name="deliverySlot" checked>
-                </label>
-              </div>
-            </div>
-
-            <!-- 3. Payment Method -->
-            <div class="checkout-step" id="checkout-step-3">
-              <div class="step-header">
-                <div>
-                  <span class="step-num">3</span>
-                  <h3>Payment Method</h3>
+                  <div class="form-group">
+                    <label for="customer-email">Email *</label>
+                    <input type="email" id="customer-email" name="customerEmail" required placeholder="john@example.com">
+                  </div>
+                </div>
+                <div class="form-group">
+                  <label for="customer-phone">Phone</label>
+                  <input type="tel" id="customer-phone" name="customerPhone" placeholder="+91 98765 43210">
                 </div>
               </div>
-              <div class="step-body">
+              <div class="form-section">
+                <h3 class="form-section-title">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="20" height="20"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>
+                  Delivery Address
+                </h3>
+                <div class="form-group">
+                  <label for="delivery-address">Address *</label>
+                  <textarea id="delivery-address" name="address" required placeholder="No. 12, 4th Cross, Indiranagar, Bangalore 560038" rows="3"></textarea>
+                </div>
+              </div>
+              <div class="form-section">
+                <h3 class="form-section-title">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="20" height="20"><rect x="1" y="4" width="22" height="16" rx="2" ry="2"/><line x1="1" y1="10" x2="23" y2="10"/></svg>
+                  Payment Method
+                </h3>
                 <div class="payment-options">
                   <label class="payment-option selected">
-                    <input type="radio" name="paymentOption" value="upi" checked>
-                    <span class="payment-icon">📱</span>
-                    <span class="payment-label">UPI</span>
-                  </label>
-                  <label class="payment-option">
-                    <input type="radio" name="paymentOption" value="card">
-                    <span class="payment-icon">💳</span>
-                    <span class="payment-label">Card</span>
-                  </label>
-                  <label class="payment-option">
-                    <input type="radio" name="paymentOption" value="cash">
+                    <input type="radio" name="paymentMethod" value="cash" checked>
                     <span class="payment-icon">💵</span>
-                    <span class="payment-label">Cash</span>
+                    <span class="payment-label">Cash on Delivery</span>
+                  </label>
+                  <label class="payment-option">
+                    <input type="radio" name="paymentMethod" value="card">
+                    <span class="payment-icon">💳</span>
+                    <span class="payment-label">Credit Card</span>
+                  </label>
+                  <label class="payment-option">
+                    <input type="radio" name="paymentMethod" value="upi">
+                    <span class="payment-icon">📱</span>
+                    <span class="payment-label">UPI / Digital</span>
                   </label>
                 </div>
               </div>
-            </div>
-
+              <button type="submit" class="btn btn-primary btn-lg btn-block" id="place-order-btn">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="20" height="20"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
+                <span>Place Order</span>
+              </button>
+            </form>
           </div>
-          
-          <div class="checkout-sidebar">
-            <div class="order-summary-card" id="checkout-summary">
-              <!-- JS Populated -->
-            </div>
+          <div class="checkout-summary-section">
+            <div class="order-summary-card" id="order-summary"></div>
           </div>
         </div>
       </div>
@@ -185,7 +182,7 @@
         <h2 class="section-title">My Orders</h2>
         <div id="orders-list"></div>
         <div class="empty-state hidden" id="empty-orders">
-          <div class="empty-3d-icon">📦</div>
+          <span class="empty-icon">📦</span>
           <h3>No orders yet</h3>
           <p>Start shopping to place your first order!</p>
           <button class="btn btn-primary" onclick="navigateTo('home')">Start Shopping</button>
@@ -200,100 +197,114 @@
 
   </main>
 
-  <!-- ═══════════ MODALS & OVERLAYS ═══════════ -->
-
-  <!-- AUTH MODAL -->
-  <div class="modal-overlay" id="auth-modal">
-    <div class="modal-content">
-      <button class="modal-close" onclick="closeAuthModal()">✕</button>
-      <div id="auth-step-1">
-        <h2 class="modal-title">Login or Signup</h2>
-        <p class="modal-desc">Enter your phone number to continue</p>
-        <div class="form-group">
-          <input type="tel" id="auth-phone" placeholder="Enter mobile number" maxlength="10" autocomplete="off" autofocus>
+  <!-- ═══════════ FOOTER ═══════════ -->
+  <footer class="site-footer" id="site-footer">
+    <div class="footer-grid">
+      <div class="footer-brand">
+        <span class="logo-text">🥬 Fresh<span class="logo-accent">Cart</span></span>
+        <p class="footer-desc">Your one-stop shop for fresh groceries delivered to your doorstep. Handpicked quality, farm-fresh produce, and unbeatable prices.</p>
+        <div class="footer-social">
+          <a href="#" title="Twitter">𝕏</a>
+          <a href="#" title="Instagram">📷</a>
+          <a href="#" title="Facebook">📘</a>
         </div>
-        <button class="btn btn-primary btn-block btn-lg" id="auth-send-otp" onclick="sendOTP()" disabled>Continue</button>
       </div>
-      <div id="auth-step-2" class="hidden">
-        <h2 class="modal-title">Verify OTP</h2>
-        <p class="modal-desc">We've sent a code to <span id="auth-otp-phone" style="font-weight:700"></span></p>
-        <div class="otp-inputs">
-          <input type="text" maxlength="1" class="otp-input" onkeyup="moveOtpFocus(this, 1)" id="otp-1">
-          <input type="text" maxlength="1" class="otp-input" onkeyup="moveOtpFocus(this, 2)" id="otp-2">
-          <input type="text" maxlength="1" class="otp-input" onkeyup="moveOtpFocus(this, 3)" id="otp-3">
-          <input type="text" maxlength="1" class="otp-input" onkeyup="moveOtpFocus(this, 4)" id="otp-4">
-        </div>
-        <div class="otp-hint">Hint: Enter 1234</div>
-        <button class="btn btn-primary btn-block btn-lg" id="auth-verify-otp" onclick="verifyOTP()">Verify & Proceed</button>
+      <div class="footer-col">
+        <h4>Shop</h4>
+        <ul>
+          <li><a href="#" onclick="filterByCategory('Fruits')">Fruits</a></li>
+          <li><a href="#" onclick="filterByCategory('Vegetables')">Vegetables</a></li>
+          <li><a href="#" onclick="filterByCategory('Dairy')">Dairy</a></li>
+          <li><a href="#" onclick="filterByCategory('Bakery')">Bakery</a></li>
+          <li><a href="#" onclick="filterByCategory('Beverages')">Beverages</a></li>
+        </ul>
+      </div>
+      <div class="footer-col">
+        <h4>Support</h4>
+        <ul>
+          <li><a href="#">Help Center</a></li>
+          <li><a href="#">Track Order</a></li>
+          <li><a href="#">Returns</a></li>
+          <li><a href="#">Shipping Info</a></li>
+        </ul>
+      </div>
+      <div class="footer-col">
+        <h4>Contact</h4>
+        <ul>
+          <li><a href="#">📧 hello@freshcart.com</a></li>
+          <li><a href="#">📞 (555) 123-4567</a></li>
+          <li><a href="#">📍 123 Green Lane</a></li>
+        </ul>
       </div>
     </div>
-  </div>
+    <div class="footer-bottom">
+      <span>© 2026 FreshCart. All rights reserved.</span>
+      <span>Made with 💚 for fresh food lovers</span>
+    </div>
+  </footer>
 
-  <!-- LOCATION MODAL -->
-  <div class="modal-overlay" id="location-modal">
-    <div class="modal-content">
-      <button class="modal-close" onclick="closeLocationModal()">✕</button>
-      <h2 class="modal-title">Select Location</h2>
-      <p class="modal-desc">Where should we deliver your order?</p>
-      <button class="btn btn-ghost btn-block location-detect-btn" onclick="detectLocation()">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="18" height="18"><circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="3"/></svg>
-        Auto-detect current location
+  <!-- ═══════════ MOBILE BOTTOM NAV ═══════════ -->
+  <nav class="mobile-bottom-nav" id="mobile-bottom-nav">
+    <div class="mobile-bottom-nav-inner">
+      <button class="mobile-nav-item active" id="mob-home" onclick="navigateTo('home')">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>
+        <span>Home</span>
       </button>
-      <div class="modal-divider"><span>OR</span></div>
-      <div class="form-group">
-        <input type="text" id="loc-address" placeholder="Enter your full address" class="modal-input">
-      </div>
-      <div style="display:flex;gap:10px;">
-        <div class="form-group" style="flex:1">
-          <input type="text" id="loc-landmark" placeholder="Landmark (Optional)" class="modal-input">
-        </div>
-        <div class="form-group" style="width:100px">
-          <input type="text" id="loc-pincode" placeholder="Pincode" maxlength="6" class="modal-input">
-        </div>
-      </div>
-      <button class="btn btn-primary btn-block btn-lg" onclick="saveLocation()">Save Address</button>
+      <button class="mobile-nav-item" id="mob-categories" onclick="document.getElementById('categories-section').scrollIntoView({behavior:'smooth'})">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg>
+        <span>Categories</span>
+      </button>
+      <button class="mobile-nav-item" id="mob-cart" onclick="toggleCart()">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="9" cy="21" r="1"/><circle cx="20" cy="21" r="1"/><path d="M1 1h4l2.68 13.39a2 2 0 0 0 2 1.61h9.72a2 2 0 0 0 2-1.61L23 6H6"/></svg>
+        <span>Cart</span>
+        <span class="mobile-nav-badge hidden" id="mob-cart-badge">0</span>
+      </button>
+      <button class="mobile-nav-item" id="mob-orders" onclick="navigateTo('orders')">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+        <span>Orders</span>
+      </button>
     </div>
-  </div>
+  </nav>
 
   <!-- ═══════════ CART SIDEBAR ═══════════ -->
   <div class="cart-overlay" id="cart-overlay" onclick="toggleCart()"></div>
   <aside class="cart-sidebar" id="cart-sidebar">
     <div class="cart-header">
       <h2 class="cart-title">
-        Shopping Cart <span id="cart-sidebar-count" style="font-size:14px; color:var(--text-secondary); margin-left:8px">(0)</span>
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="22" height="22"><circle cx="9" cy="21" r="1"/><circle cx="20" cy="21" r="1"/><path d="M1 1h4l2.68 13.39a2 2 0 0 0 2 1.61h9.72a2 2 0 0 0 2-1.61L23 6H6"/></svg>
+        Shopping Cart
       </h2>
-      <button class="cart-close" id="cart-close" onclick="toggleCart()">✕</button>
+      <button class="cart-close" id="cart-close" onclick="toggleCart()">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="20" height="20"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+      </button>
     </div>
     <div class="cart-items" id="cart-items"></div>
     <div class="cart-empty hidden" id="cart-empty">
-      <!-- Better empty state illustration -->
-      <img src="https://images.unsplash.com/photo-1594890605927-4188c1c4b8b6?w=400&h=300&fit=crop&q=80" alt="Empty Cart" class="empty-cart-img" style="border-radius:20px; width:200px; height:150px; object-fit:cover; margin-bottom: 24px; box-shadow: 0 10px 30px rgba(0,0,0,0.2);">
-      <h3>Your cart is empty</h3>
-      <p>Add items to get started</p>
-      <button class="btn btn-primary" onclick="toggleCart()">Browse Products</button>
+      <span class="empty-icon">🛒</span>
+      <p>Your cart is empty</p>
+      <button class="btn btn-primary" onclick="toggleCart()">Start Shopping</button>
     </div>
     <div class="cart-footer" id="cart-footer">
-      <div class="cart-bill-details" id="cart-bill-details">
-         <!-- Populated via JS -->
+      <div class="cart-totals">
+        <div class="cart-total-row">
+          <span>Subtotal</span>
+          <span id="cart-subtotal">$0.00</span>
+        </div>
+        <div class="cart-total-row savings hidden" id="cart-savings-row">
+          <span>Savings</span>
+          <span class="savings-amount" id="cart-savings">-$0.00</span>
+        </div>
+        <div class="cart-total-row total">
+          <span>Total</span>
+          <span id="cart-total">$0.00</span>
+        </div>
       </div>
       <button class="btn btn-primary btn-lg btn-block" id="checkout-btn" onclick="goToCheckout()">
-        <span id="checkout-btn-text">Proceed to Checkout</span>
+        Proceed to Checkout
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="18" height="18"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
       </button>
     </div>
   </aside>
-
-  <!-- FLOATING CART BAR (Mobile/Always visible when items exist) -->
-  <div class="floating-cart-bar hidden" id="floating-cart-bar" onclick="toggleCart()">
-    <div class="fc-info">
-      <span class="fc-count" id="fc-count">0 items</span>
-      <span class="fc-total" id="fc-total">$0.00</span>
-    </div>
-    <div class="fc-action">
-      View Cart 
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="18" height="18"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
-    </div>
-  </div>
 
   <!-- ═══════════ TOAST CONTAINER ═══════════ -->
   <div class="toast-container" id="toast-container"></div>
