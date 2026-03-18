@@ -71,13 +71,15 @@ function detectLocation() {
         const res = await fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${pos.coords.latitude}&lon=${pos.coords.longitude}`);
         const data = await res.json();
         const area = data.address.suburb || data.address.neighbourhood || data.address.city || 'Kodambakkam, Chennai';
-        if (titleEl) titleEl.innerHTML = `DELIVER TO ${area}`;
-        if (subEl) subEl.innerHTML = `Delivering to ${area} - As soon as possible`;
+        if (titleEl) titleEl.innerHTML = `Delivery in 10 mins`;
+        if (subEl) subEl.innerHTML = area;
       } catch (e) {
-        if (subEl) subEl.innerHTML = `Delivering to Kodambakkam, Chennai - As soon as possible`;
+        if (titleEl) titleEl.innerHTML = `Delivery in 10 mins`;
+        if (subEl) subEl.innerHTML = `Kodambakkam, Chennai`;
       }
     }, () => {
-        if (subEl) subEl.innerHTML = `Delivering to Kodambakkam, Chennai - As soon as possible`;
+        if (titleEl) titleEl.innerHTML = `Delivery in 10 mins`;
+        if (subEl) subEl.innerHTML = `Kodambakkam, Chennai`;
     });
   }
 }
