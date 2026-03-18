@@ -28,6 +28,7 @@ const state = {
   currentCategory: 'All',
   searchTerm: '',
   sortMode: 'default',
+  filters: null,
   theme: localStorage.getItem('fc_theme') || 'light',
 };
 
@@ -52,20 +53,7 @@ document.addEventListener('DOMContentLoaded', () => {
   setupSearch();
   setupPaymentOptions();
   loadApp();
-  startSearchAnimation();
 });
-
-function startSearchAnimation() {
-  const keywords = ['fruits', 'milk', 'snacks under ₹100', 'bread', 'vegetables', 'beverages', 'top-rated items', 'fresh dairy'];
-  let kIdx = 0;
-  setInterval(() => {
-    const el = document.getElementById('search-input');
-    if (el && document.activeElement !== el && !state.searchTerm) {
-      el.setAttribute('placeholder', 'Search for ' + keywords[kIdx] + '…');
-      kIdx = (kIdx + 1) % keywords.length;
-    }
-  }, 1500);
-}
 
 async function loadApp() {
   showSkeletons(6);
@@ -216,6 +204,14 @@ async function loadProducts() {
 
 function sortAndRender() {
   let prods = [...state.allProducts];
+
+  if (state.filters) {
+    prods = prods.filter(p => {
+      const pPrice = ep(p);
+      return pPrice >= state.filters.min && pPrice <= state.filters.max;
+    });
+  }
+
   const mode = state.sortMode;
   if (mode === 'price-asc') prods.sort((a, b) => ep(a) - ep(b));
   else if (mode === 'price-desc') prods.sort((a, b) => ep(b) - ep(a));
@@ -323,6 +319,20 @@ function setupSearch() {
     dt = setTimeout(loadProducts, 300);
   });
   si.addEventListener('keydown', e => { if (e.key === 'Escape') clearSearch(); });
+
+  const ph = document.getElementById('search-ph');
+  if (!ph) return;
+  const texts = ['Search for "fresh milk"', 'Search for "wheat bread"', 'Search for "snacks under ₹100"', 'Search for "sweet mangoes"'];
+  let idx = 0;
+  setInterval(() => {
+    if (si === document.activeElement || si.value) return;
+    ph.style.opacity = '0';
+    setTimeout(() => {
+      idx = (idx + 1) % texts.length;
+      ph.textContent = texts[idx];
+      ph.style.opacity = '1';
+    }, 400); // Wait for fade out
+  }, 2500);
 }
 
 function clearSearch() {
@@ -533,9 +543,11 @@ async function placeOrder(e) {
     });
     if (res.success) {
       state.cart = { items: [], subtotal: 0, total: 0, savings: 0, itemCount: 0 };
+      state.cartId = null;
+      localStorage.removeItem('fc_cart_id');
       updateCartUI();
-      renderSheetItems();
       renderProducts();
+      renderSheetItems();
       showConfirmation(res.data);
       document.getElementById('checkout-form').reset();
       document.querySelectorAll('.pay-opt').forEach(o => o.classList.remove('selected'));
@@ -543,7 +555,7 @@ async function placeOrder(e) {
     } else { showToast('❌ ' + (res.error || 'Order failed')); }
   } catch { showToast('❌ Network error. Retry.'); }
   btn.disabled = false;
-  btn.innerHTML = '<span>Place Order</span><ui-icon name="chevron-right" style="margin-left:4px;font-size:16px"></ui-icon>';
+  btn.innerHTML = '<span>Place Order</span><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="18" height="18"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>';
 }
 
 function showConfirmation(order) {
@@ -624,4 +636,34 @@ function showToast(message, duration = 3200) {
   t.innerHTML = `<span>${message}</span><div class="toast-bar"></div>`;
   stack.appendChild(t);
   setTimeout(() => { t.classList.add('removing'); setTimeout(() => t.remove(), 260); }, duration);
+}
+
+/* ── FILTER SHEET ── */
+function openFilterSheet() {
+  document.getElementById('filter-sheet').classList.remove('hidden');
+  document.getElementById('sheet-overlay').classList.remove('hidden');
+  document.body.style.overflow = 'hidden';
+}
+
+function closeFilterSheet() {
+  document.getElementById('filter-sheet').classList.add('hidden');
+  document.getElementById('sheet-overlay').classList.add('hidden');
+  document.body.style.overflow = '';
+}
+
+function applyFilters() {
+  closeFilterSheet();
+  const minP = document.getElementById('filter-min-price').value;
+  const maxP = document.getElementById('filter-max-price').value;
+  state.filters = { min: minP ? Number(minP) : 0, max: maxP ? Number(maxP) : 99999 };
+  sortAndRender();
+}
+
+function clearFilters() {
+  document.getElementById('filter-min-price').value = '';
+  document.getElementById('filter-max-price').value = '';
+  document.querySelectorAll('input[name="diet"]').forEach(e => e.checked = false);
+  state.filters = null;
+  sortAndRender();
+  closeFilterSheet();
 }

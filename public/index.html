@@ -64,12 +64,15 @@
       </div>
       <div class="search-bar">
         <ui-icon name="search" style="color:var(--text-3); font-size: 18px;"></ui-icon>
-        <input type="text" id="search-input" class="search-bar-input" placeholder="Search for fruits, milk, snacks…" autocomplete="off" onkeypress="if(event.key==='Enter') loadProducts();">
+        <div style="position:relative; flex:1; height:100%; display:flex; align-items:center;">
+          <input type="text" id="search-input" class="search-bar-input" style="width:100%; height:100%; z-index:2; background:transparent;" autocomplete="off" onkeypress="if(event.key==='Enter') loadProducts();" onfocus="document.getElementById('search-ph').style.opacity='0'" onblur="if(!this.value) document.getElementById('search-ph').style.opacity='1'">
+          <div id="search-ph" style="position:absolute; left:0; top:0; bottom:0; display:flex; align-items:center; color:var(--text-muted); font-size:14px; pointer-events:none; z-index:1; transition: opacity 0.4s ease; transition-delay: 0.1s; white-space:nowrap; overflow:hidden;">Search for "fresh milk"</div>
+        </div>
         <button class="search-clear hidden" id="search-clear" onclick="clearSearch()">
           <ui-icon name="x"></ui-icon>
         </button>
-        <button class="search-filter-btn" id="search-filter-btn" onclick="document.getElementById('sort-select').focus()">
-          <ui-icon name="sliders-horizontal"></ui-icon>
+        <button class="search-filter-btn" id="search-filter-btn" onclick="openFilterSheet()">
+          <ui-icon name="sliders-horizontal" style="font-size:14px;"></ui-icon>
         </button>
       </div>
     </div>
@@ -294,6 +297,42 @@
       Proceed to Checkout
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="18" height="18"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
     </button>
+  </div>
+</div>
+
+<!-- ══ FILTER BOTTOM SHEET ══ -->
+<div class="cart-sheet hidden" id="filter-sheet" style="z-index: 105;">
+  <div class="sheet-handle"></div>
+  <div class="sheet-header">
+    <div class="sheet-title" style="display:flex;align-items:center;gap:6px">
+      <ui-icon name="settings-2"></ui-icon> Advanced Filters
+    </div>
+    <button class="sheet-close" onclick="closeFilterSheet()">
+      <ui-icon name="x"></ui-icon>
+    </button>
+  </div>
+  <div class="sheet-items" style="padding: 20px 16px;">
+    <div class="filter-section" style="margin-bottom: 20px;">
+      <div style="font-size: 13px; font-weight: 700; margin-bottom: 12px; color: var(--text);">Price Range</div>
+      <div style="display:flex; align-items:center; gap:10px;">
+        <input type="number" id="filter-min-price" placeholder="Min ₹" style="flex:1; padding: 10px; background: var(--bg-input); border: 1.5px solid var(--border); border-radius: 10px; font-size: 13px; color: var(--text);">
+        <span style="color:var(--text-muted)">—</span>
+        <input type="number" id="filter-max-price" placeholder="Max ₹" style="flex:1; padding: 10px; background: var(--bg-input); border: 1.5px solid var(--border); border-radius: 10px; font-size: 13px; color: var(--text);">
+      </div>
+    </div>
+    <div class="filter-section" style="margin-bottom: 20px;">
+      <div style="font-size: 13px; font-weight: 700; margin-bottom: 12px; color: var(--text);">Dietary Preferences</div>
+      <div style="display:flex; flex-wrap:wrap; gap:8px;">
+        <label class="pay-opt" style="flex: 1 1 45%; justify-content:center;"><input type="checkbox" name="diet" value="organic"> 🌿 Organic</label>
+        <label class="pay-opt" style="flex: 1 1 45%; justify-content:center;"><input type="checkbox" name="diet" value="vegan"> 🌱 Vegan</label>
+        <label class="pay-opt" style="flex: 1 1 45%; justify-content:center;"><input type="checkbox" name="diet" value="gluten-free"> 🌾 Gluten-free</label>
+        <label class="pay-opt" style="flex: 1 1 45%; justify-content:center;"><input type="checkbox" name="diet" value="local"> 🚜 Local</label>
+      </div>
+    </div>
+  </div>
+  <div class="sheet-footer" style="display:flex; gap:10px;">
+    <button class="btn-ghost" onclick="clearFilters()" style="flex:1">Reset</button>
+    <button class="btn-primary" onclick="applyFilters()" style="flex:2">Apply Filters</button>
   </div>
 </div>
 
