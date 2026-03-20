@@ -29,7 +29,8 @@ const state = {
   searchTerm: '',
   sortMode: 'default',
   filters: null,
-  theme: localStorage.getItem('fc_theme') || 'light',
+  theme: localStorage.getItem('fc_theme') || (window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light'),
+  currentScreen: 'browse',
 };
 
 const API = '';
@@ -48,9 +49,8 @@ const CAT_CFG = {
 /* ── INIT ── */
 document.addEventListener('DOMContentLoaded', () => {
   applyTheme(state.theme);
-  updateClock();
-  setInterval(updateClock, 30000);
   setupSearch();
+  cycleSearchPlaceholder();
   setupPaymentOptions();
   loadApp();
 });
@@ -71,24 +71,19 @@ function detectLocation() {
         const res = await fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${pos.coords.latitude}&lon=${pos.coords.longitude}`);
         const data = await res.json();
         const area = data.address.suburb || data.address.neighbourhood || data.address.city || 'Kodambakkam, Chennai';
-        if (titleEl) titleEl.innerHTML = `Delivery in 10 mins`;
+        if (titleEl) titleEl.innerHTML = `10 minutes`;
         if (subEl) subEl.innerHTML = area;
       } catch (e) {
-        if (titleEl) titleEl.innerHTML = `Delivery in 10 mins`;
+        if (titleEl) titleEl.innerHTML = `10 minutes`;
         if (subEl) subEl.innerHTML = `Kodambakkam, Chennai`;
       }
     }, () => {
-        if (titleEl) titleEl.innerHTML = `Delivery in 10 mins`;
+        if (titleEl) titleEl.innerHTML = `10 minutes`;
         if (subEl) subEl.innerHTML = `Kodambakkam, Chennai`;
     });
   }
 }
 
-/* ── CLOCK ── */
-function updateClock() {
-  const el = document.getElementById('status-time');
-  if (el) el.textContent = new Date().toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit', hour12: false });
-}
 
 /* ── THEME ── */
 function applyTheme(t) {
@@ -96,8 +91,11 @@ function applyTheme(t) {
   state.theme = t;
   localStorage.setItem('fc_theme', t);
 }
-document.getElementById('theme-toggle').addEventListener('click', () => {
-  applyTheme(state.theme === 'light' ? 'dark' : 'light');
+document.addEventListener('click', e => {
+  const target = e.target.closest('#theme-toggle');
+  if (target) {
+    applyTheme(state.theme === 'light' ? 'dark' : 'light');
+  }
 });
 
 /* ── CATEGORY THEME (CSS vars on app-shell) ── */
@@ -167,40 +165,47 @@ function switchCategory(cat) {
   // Apply theme
   applyTabTheme(cat);
 
-  // Update header chip
-  const cfg = CAT_CFG[cat] || { chip: cat };
-  document.getElementById('category-header-chip').innerHTML = cfg.chip;
-
+  // Update header logic
+  clearSearch(false); // keep category without clearing everything immediately but let's just clear query
+  updateListStructure();
+  
   // Animate content
-  const ca = document.getElementById('content-area');
-  ca.classList.add('transitioning');
-  setTimeout(() => ca.classList.remove('transitioning'), 320);
-
   // Reset content area scroll
-  document.getElementById('content-area').scrollTop = 0;
+  ca.scrollTo(0, 0);
 
   loadProducts();
 }
 
-function initCategoryHeader() {
-  const cfg = CAT_CFG[state.currentCategory] || { chip: state.currentCategory };
-  document.getElementById('category-header-chip').innerHTML = cfg.chip;
-  applyTabTheme(state.currentCategory);
+function updateListStructure() {
+  const isAll = state.currentCategory === 'All' && !state.searchTerm;
+  // If 'All', we don't show the sort/filter bar at the top, we group by sections.
+  const sfBar = document.getElementById('sort-filter-bar');
+  if (sfBar) sfBar.style.display = isAll ? 'none' : 'flex';
 }
 
 /* ── PRODUCTS ── */
 async function loadProducts() {
-  showSkeletons(6);
+  // Skip skeletons if data is already cached
+  if (!state.allProducts || state.allProducts.length === 0) {
+    showSkeletons(6);
+  }
   let url = '/api/products';
   const p = new URLSearchParams();
   if (state.currentCategory && state.currentCategory !== 'All') p.set('category', state.currentCategory);
   if (state.searchTerm) p.set('search', state.searchTerm);
   if (p.toString()) url += '?' + p.toString();
-  const res = await apiGet(url);
-  if (res.success) {
-    state.allProducts = res.data;
-    sortAndRender();
-    initCategoryHeader();
+  try {
+    const res = await apiGet(url);
+    if (res.success) {
+      state.allProducts = res.data;
+      sortAndRender();
+    } else {
+      showToast('<ui-icon name="alert-triangle"></ui-icon> Failed to load products.');
+      document.getElementById('products-grid').innerHTML = '<div class="empty-state"><div class="empty-emoji">⚠️</div><div class="empty-title">Failed to load items</div><button class="btn-ghost" style="margin-top:10px;" onclick="loadProducts()">Retry</button></div>';
+    }
+  } catch (err) {
+    showToast('<ui-icon name="wifi-off"></ui-icon> Having trouble loading items. Check your connection or try again.');
+    document.getElementById('products-grid').innerHTML = '<div class="empty-state"><div class="empty-emoji">📶</div><div class="empty-title">Network Error</div><div class="empty-sub">Please check your internet connection.</div><button class="btn-primary" style="margin-top:10px; width:120px;" onclick="loadProducts()">Retry</button></div>';
   }
 }
 
@@ -210,7 +215,21 @@ function sortAndRender() {
   if (state.filters) {
     prods = prods.filter(p => {
       const pPrice = ep(p);
-      return pPrice >= state.filters.min && pPrice <= state.filters.max;
+      if (state.filters.price) {
+        if (state.filters.price === 'under_50' && pPrice >= 50) return false;
+        if (state.filters.price === '50_100' && (pPrice < 50 || pPrice > 100)) return false;
+        if (state.filters.price === '100_200' && (pPrice < 100 || pPrice > 200)) return false;
+        if (state.filters.price === 'above_200' && pPrice <= 200) return false;
+      }
+      if (state.filters.rating) {
+        if (p.rating < parseFloat(state.filters.rating)) return false;
+      }
+      if (state.filters.cats && state.filters.cats.length > 0) {
+        if (!state.filters.cats.includes(p.category)) return false;
+      }
+      if (state.filters.quick === 'discount' && p.discount === 0) return false;
+      if (state.filters.quick === 'hot_50' && p.discount === 0) return false;
+      return true;
     });
   }
 
@@ -219,13 +238,77 @@ function sortAndRender() {
   else if (mode === 'price-desc') prods.sort((a, b) => ep(b) - ep(a));
   else if (mode === 'rating') prods.sort((a, b) => b.rating - a.rating);
   else if (mode === 'discount') prods.sort((a, b) => b.discount - a.discount);
+
   state.products = prods;
+  
+  updateContextLine();
   renderProducts();
 }
 
+function updateContextLine() {
+  const ctx = document.getElementById('search-result-context');
+  if (state.searchTerm && state.searchTerm.length > 0) {
+    document.getElementById('context-query').textContent = state.searchTerm;
+    ctx.classList.remove('hidden');
+    ctx.innerHTML = `Showing ${state.products.length} result${state.products.length === 1 ? '' : 's'} for '<span id="context-query" style="color:var(--text);">${state.searchTerm}</span>' · Sorted by ${document.getElementById('current-sort-label')?.innerText.replace('Sort: ','') || 'Relevance'}`;
+  } else {
+    ctx.classList.add('hidden');
+  }
+}
+
 function applySort() {
-  state.sortMode = document.getElementById('sort-select').value;
   sortAndRender();
+}
+
+function selectSort(val, label, desc) {
+  state.sortMode = val;
+  const labelEl = document.getElementById('current-sort-label');
+  if (labelEl) labelEl.innerText = 'Sort: ' + (val==='default'?'Relevance':label);
+  
+  const dd = document.getElementById('sort-dropdown');
+  if (dd) dd.classList.add('hidden');
+  
+  document.querySelectorAll('.dropdown-item').forEach(e=>e.classList.remove('active'));
+  event.currentTarget.classList.add('active');
+  applySort();
+}
+
+function openSortMenu() {
+  document.getElementById('sort-dropdown').classList.toggle('hidden');
+}
+
+function renderAppliedFilters() {
+  const c = document.getElementById('applied-filters');
+  if (!c) return;
+  if (!state.filters || Object.keys(state.filters).length === 0) {
+    c.innerHTML = '';
+    return;
+  }
+  let html = '';
+  if (state.filters.price) html += `<span class="applied-chip" onclick="removeFilter('price')">${state.filters.price.replace('_',' ')} <ui-icon name="x"></ui-icon></span>`;
+  if (state.filters.rating) html += `<span class="applied-chip" onclick="removeFilter('rating')">${state.filters.rating}+ <ui-icon name="x"></ui-icon></span>`;
+  if (state.filters.quick === 'discount') html += `<span class="applied-chip" onclick="removeFilter('quick')">Best Deals <ui-icon name="x"></ui-icon></span>`;
+  if (state.filters.cats) {
+    state.filters.cats.forEach(cat => {
+      html += `<span class="applied-chip" onclick="removeCatFilter('${cat}')">${cat} <ui-icon name="x"></ui-icon></span>`;
+    });
+  }
+  if (html) html += `<span class="clear-all-filters" onclick="clearFilters()">Clear all</span>`;
+  c.innerHTML = html;
+}
+
+function removeFilter(key) {
+  if (state.filters) delete state.filters[key];
+  sortAndRender();
+  renderAppliedFilters();
+}
+function removeCatFilter(cat) {
+  if (state.filters?.cats) {
+    state.filters.cats = state.filters.cats.filter(c => c !== cat);
+    if(state.filters.cats.length===0) delete state.filters.cats;
+  }
+  sortAndRender();
+  renderAppliedFilters();
 }
 
 const ep = p => p.discount > 0 ? p.price * (1 - p.discount / 100) : p.price;
@@ -238,69 +321,115 @@ function renderProducts() {
     grid.innerHTML = '';
     const emptySub = document.getElementById('empty-search-sub');
     if (emptySub) {
-      emptySub.innerHTML = `No items found for '${state.searchTerm}'.<br>Try searching for 'milk', 'bread', or 'snacks under ₹100'.`;
+      emptySub.innerHTML = `No exact matches for '${state.searchTerm}'.`;
     }
     empty.classList.remove('hidden');
     return;
   }
   empty.classList.add('hidden');
 
-  grid.innerHTML = state.products.map((p, i) => {
-    const effP = ep(p);
-    const saving = (p.price - effP).toFixed(2);
-    const ci = getCartItem(p.id);
-    const qty = ci ? ci.quantity : 0;
-    const showDisc = p.discount > 0;
-    const showTop = p.rating >= 4.8;
-    const catIcon = CAT_CFG[p.category] ? CAT_CFG[p.category].emoji : '<ui-icon name="package"></ui-icon>';
+  const isAll = state.currentCategory === 'All' && !state.searchTerm;
+  
+  if (isAll) {
+    // Render sections grouped by category
+    const catGroups = {};
+    state.products.forEach(p => {
+      if (!catGroups[p.category]) catGroups[p.category] = [];
+      catGroups[p.category].push(p);
+    });
+    
+    // Group titles map
+    const titles = {
+      'Fruits': 'Fresh Fruits',
+      'Vegetables': 'Everyday Vegetables',
+      'Dairy': 'Dairy Essentials',
+      'Bakery': 'Bakery Favourites',
+      'Beverages': 'Beverages',
+      'Snacks': 'Smart Snacks'
+    };
+    
+    grid.classList.remove('products-grid'); // remove default grid to do sections
+    grid.innerHTML = Object.keys(catGroups).map(cat => {
+      const gProducts = catGroups[cat].slice(0, 10); // cap items per home section
+      const catConfig = CAT_CFG[cat] || {emoji: ''};
+      return `
+        <div class="list-section">
+          <div class="list-section-header">
+            <div class="section-title-wrap">
+              <span class="section-icon">${catConfig.emoji}</span>
+              <span class="section-title">${titles[cat] || cat}</span>
+            </div>
+            <button class="section-see-all" onclick="switchCategory('${cat}')">See all <ui-icon name="chevron-right" style="font-size:14px;margin-bottom:-2px;"></ui-icon></button>
+          </div>
+          <div class="products-carousel">
+            ${gProducts.map((p,i) => renderSingleCard(p, i)).join('')}
+          </div>
+        </div>
+      `;
+    }).join('');
+  } else {
+    grid.classList.add('products-grid');
+    grid.innerHTML = state.products.map((p, i) => renderSingleCard(p, i)).join('');
+  }
+}
 
-    return `
-      <div class="product-card" style="animation-delay:${i * 0.035}s">
-        <div class="product-img-wrap">
-          ${showDisc ? `<span class="badge-discount" style="z-index:1">-${p.discount}%</span>` : ''}
-          ${showTop ? `<span class="badge-top-rated"><ui-icon name="star" style="vertical-align:-2px;margin-right:2px"></ui-icon> Top Pick</span>` : ''}
-          ${p.imageUrl
-            ? `<img src="${p.imageUrl}" alt="${p.name}" loading="lazy" onerror="this.style.display='none'">`
-            : `<div style="width:100%; height:100%; border-radius:12px; background:rgba(0,0,0,0.03);"></div>`}
+function renderSingleCard(p, i) {
+  const effP = ep(p);
+  const saving = (p.price - effP).toFixed(2);
+  const ci = getCartItem(p.id);
+  const qty = ci ? ci.quantity : 0;
+  const showDisc = p.discount > 0;
+  let badgeText = '';
+  if (p.rating >= 4.8) badgeText = 'Top Pick';
+  else if (p.id.includes('v') || ['p5','p10'].includes(p.id)) badgeText = 'Bestseller';
+  
+  // Single card layout definition
+  return `
+    <div class="product-card ${qty > 0 ? 'in-cart' : ''}" style="animation-delay:${(i%10) * 0.035}s">
+      <div class="product-img-wrap">
+        ${showDisc ? `<span class="badge-discount">-${p.discount}% OFF</span>` : ''}
+        ${badgeText ? `<span class="badge-top-rated">${badgeText}</span>` : ''}
+        ${p.imageUrl
+          ? `<img src="${p.imageUrl}" alt="${p.name}" loading="lazy" onerror="this.style.display='none'">`
+          : `<div style="width:100%; height:100%; background:rgba(0,0,0,0.03);"></div>`}
+      </div>
+      <div class="product-body">
+        <div class="product-rating-row" style="display:flex; align-items:center; gap:6px; margin-bottom:4px;">
+          <span style="font-size:10px; font-weight:700; color:#b45309; background:rgba(251,191,36,0.15); padding:2px 4px; border-radius:4px; display:inline-flex; align-items:center;">
+            <ui-icon name="star" style="font-size:8px; margin-right:2px;"></ui-icon> ${p.rating}
+          </span>
+          <span class="product-cat-label" style="font-size:9px; font-weight:800; text-transform:uppercase; color:var(--text-muted);">${p.category}</span>
         </div>
-        <div class="product-body" style="display:flex; flex-direction:column; flex:1;">
-          <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:4px">
-            <div style="display:flex; gap:6px;">
-              ${showDisc ? `<span style="background:var(--cat-accent);color:#fff;font-size:10px;font-weight:800;padding:2px 6px;border-radius:6px;line-height:1">- ${p.discount}%</span>` : ''}
-              ${showTop ? `<span style="background:rgba(22,163,74,0.1);color:#16a34a;font-size:10px;font-weight:800;padding:2px 6px;border-radius:6px;line-height:1">Top Pick</span>` : ''}
-            </div>
-            <div style="font-size:11px; font-weight:700; color:var(--text-3); display:flex; align-items:center;"><ui-icon name="star" style="font-size:10px; margin-right:2px; color:#d97706"></ui-icon> ${p.rating}</div>
+        <div class="product-name" style="font-size:13px; font-weight:700; color:var(--text); line-height:1.3; margin-bottom:4px; display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical; overflow:hidden;">${p.name}</div>
+        <div class="product-desc" style="font-size:11px; color:var(--text-3); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; margin-bottom:auto;">${p.description}</div>
+        
+        <div class="product-price-row" style="margin-top:8px;">
+          <div style="display:flex; align-items:flex-end; gap:4px">
+            <span class="price-current" style="font-size:16px; font-weight:800; color:var(--text); line-height:1;">₹${effP.toFixed(0)}</span>
+            <span class="price-unit" style="font-size:11px;color:var(--text-muted);font-weight:500;">/${p.unit}</span>
           </div>
-          <div class="product-cat-label" style="margin-bottom:2px">${p.category}</div>
-          <div class="product-name" style="font-size:14px; margin-bottom:4px">${p.name}</div>
-          <div class="product-desc" style="flex:1;">${p.description}</div>
-          <div class="product-price-row" style="display:flex; justify-content:space-between; align-items:flex-end; margin-top:auto;">
-            <div style="display:flex; flex-direction:column;">
-              <div style="display:flex; align-items:baseline; gap:4px">
-                <span class="price-current">₹${effP.toFixed(2)}</span>
-                <span class="price-unit" style="font-size:10px;color:var(--text-muted)">/${p.unit}</span>
-              </div>
-              ${showDisc ? `<div style="display:flex; align-items:center; gap:4px; margin-top:2px;">
-                <span class="price-old" style="font-size:10px; color:var(--text-muted); text-decoration:line-through;">₹${p.price.toFixed(2)}</span>
-                <span class="price-save" style="font-size:9px; font-weight:700; color:var(--cat-accent);">Save ₹${saving}</span>
-              </div>` : ''}
-            </div>
-            
-            <div class="card-action" style="position:static; margin-bottom:0;">
-              ${qty > 0
-                ? `<div class="qty-stepper" id="stepper-${p.id}">
-                    <button onclick="updateQty('${p.id}',${qty - 1})">−</button>
-                    <span class="qty-val">${qty}</span>
-                    <button onclick="updateQty('${p.id}',${qty + 1})">+</button>
-                  </div>`
-                : `<button class="btn-add" id="add-btn-${p.id}" onclick="addToCart('${p.id}', this)" style="padding:6px 14px; border-radius:8px;">
-                    Add
-                  </button>`}
-            </div>
+          <div style="min-height:12px; margin-top:4px;">
+            ${showDisc ? `
+            <div style="display:flex; align-items:center; gap:4px;">
+              <span class="price-old" style="font-size:10px; color:var(--text-muted); text-decoration:line-through;">₹${p.price.toFixed(0)}</span>
+              <span class="price-save" style="font-size:10px; font-weight:600; color:var(--cat-accent);">Save ₹${saving}</span>
+            </div>` : ''}
           </div>
         </div>
-      </div>`;
-  }).join('');
+        
+        <div class="card-action" style="margin-top:10px;">
+          ${qty > 0
+            ? `<div class="qty-stepper" id="stepper-${p.id}">
+                <button onclick="updateQty('${p.id}',${qty - 1})">−</button>
+                <span class="qty-val">${qty}</span>
+                <button onclick="updateQty('${p.id}',${qty + 1})">+</button>
+              </div>`
+            : `<button class="btn-add" id="add-btn-${p.id}" onclick="addToCart('${p.id}', this)">
+                ADD
+              </button>`}
+        </div>
+      </div>
+    </div>`;
 }
 
 function getCartItem(pid) {
@@ -316,31 +445,137 @@ function setupSearch() {
     const val = e.target.value.trim();
     state.searchTerm = val;
     clr.classList.toggle('hidden', !val);
+    highlightCategoryIntent(val);
     clearTimeout(dt);
-    dt = setTimeout(loadProducts, 300);
+    dt = setTimeout(() => {
+      updateListStructure();
+      loadProducts();
+    }, 300);
   });
   si.addEventListener('keydown', e => { if (e.key === 'Escape') clearSearch(); });
-
-  const ph = document.getElementById('search-ph');
-  if (!ph) return;
-  const texts = ['Search for "fresh milk"', 'Search for "wheat bread"', 'Search for "snacks under ₹100"', 'Search for "sweet mangoes"'];
-  let idx = 0;
-  setInterval(() => {
-    if (si === document.activeElement || si.value) return;
-    ph.style.opacity = '0';
-    setTimeout(() => {
-      idx = (idx + 1) % texts.length;
-      ph.textContent = texts[idx];
-      ph.style.opacity = '1';
-    }, 400); // Wait for fade out
-  }, 2500);
 }
 
-function clearSearch() {
+function cycleSearchPlaceholder() {
+  const items = ['"fresh milk"', '"sweet mangoes"', '"organic bread"', '"snacks under ₹100"', '"farm dairy"'];
+  const input = document.getElementById('search-input');
+  const dynamic = document.getElementById('search-dynamic-item');
+  const layer = document.getElementById('search-placeholder-layer');
+  if (!input || !dynamic) return;
+
+  const updateVis = () => { layer.style.opacity = (input.value.length > 0) ? '0' : '1'; };
+  input.addEventListener('input', updateVis);
+  
+  if (dynamic) {
+    dynamic.style.transition = 'opacity 0.4s, transform 0.4s';
+  }
+
+  let idx = 0;
+  setInterval(() => {
+    dynamic.style.opacity = '0';
+    dynamic.style.transform = 'translateY(-4px)';
+    setTimeout(() => {
+      idx = (idx + 1) % items.length;
+      dynamic.textContent = items[idx];
+      dynamic.style.opacity = '1';
+      dynamic.style.transform = 'translateY(0)';
+    }, 450);
+  }, 3500);
+}
+
+function highlightCategoryIntent(term) {
+  const t = term.toLowerCase();
+  let cat = null;
+  if(t.includes('milk') || t.includes('cheese') || t.includes('butter') || t.includes('paneer')) cat = 'Dairy';
+  else if (t.includes('apple') || t.includes('mango') || t.includes('banana') || t.includes('fruit')) cat = 'Fruits';
+  else if (t.includes('chips') || t.includes('snack') || t.includes('biscuit') || t.includes('cookie')) cat = 'Snacks';
+  else if (t.includes('bread') || t.includes('cake') || t.includes('croissant')) cat = 'Bakery';
+  else if (t.includes('drink') || t.includes('juice') || t.includes('coke') || t.includes('coffee')) cat = 'Beverages';
+  else if (t.includes('tomato') || t.includes('potato') || t.includes('onion') || t.includes('veg')) cat = 'Vegetables';
+  
+  document.querySelectorAll('.tab-pill').forEach(el => el.style.boxShadow = '');
+  if(cat) {
+    const el = document.getElementById('tab-' + cat);
+    if(el) el.style.boxShadow = '0 0 0 2px var(--cat-accent), 0 0 10px var(--cat-accent-bg)';
+  }
+}
+
+function clearSearch(reload = true) {
   state.searchTerm = '';
   document.getElementById('search-input').value = '';
   document.getElementById('search-clear').classList.add('hidden');
-  loadProducts();
+  const layer = document.getElementById('search-placeholder-layer');
+  if (layer) layer.style.opacity = '1';
+  updateListStructure();
+  if(reload) loadProducts();
+}
+
+function applyQuickFilter(type) {
+  state.filters = state.filters || {};
+  if (type.startsWith('price_')) {
+    state.filters.price = type.replace('price_','');
+  } else if (type.startsWith('rating_')) {
+    state.filters.rating = type.replace('rating_','');
+  } else if (type === 'discount') {
+    state.filters.quick = 'discount';
+  } else {
+    state.filters.cats = [type];
+  }
+  sortAndRender();
+  renderAppliedFilters();
+}
+
+function showHotDeals() {
+  switchScreen('browse');
+  applyQuickFilter('hot_50');
+  showToast('<ui-icon name="flame" style="margin-right:6px;color:#ef4444;--icon-color:#ef4444;"></ui-icon> 🔥 Today\'s <b>Half-Price</b> Steals!');
+}
+
+function switchScreen(id) {
+  state.currentScreen = id;
+  // Toggle screens
+  document.querySelectorAll('.screen').forEach(s => {
+    s.classList.remove('active');
+    s.classList.add('hidden');
+  });
+  
+  // Virtual screen mappings to the physical screen container
+  // Virtual screen mappings
+  const CONTAINER_MAP = { 'hot-deals': 'browse' };
+  const screenId = CONTAINER_MAP[id] || id;
+  const target = document.getElementById('screen-' + screenId);
+  if (target) {
+    target.classList.remove('hidden');
+    target.classList.add('active');
+  }
+
+  // Update Bottom Nav
+  document.querySelectorAll('.nav-tab').forEach(t => {
+    t.classList.remove('active');
+    const icon = t.querySelector('ui-icon');
+    if (icon) icon.style.color = 'var(--text-3)';
+  });
+
+  const TAB_MAP = {
+    'browse': 'nav-home',
+    'orders': 'nav-orders-again',
+    'categories': 'nav-categories',
+    'hot-deals': 'nav-hot-deals'
+  };
+
+  const tabId = TAB_MAP[id];
+  const tab = document.getElementById(tabId);
+  if (tab) {
+    tab.classList.add('active');
+    const icon = tab.querySelector('ui-icon');
+    if (icon) {
+      if (tabId === 'nav-hot-deals') icon.style.color = '#ef4444';
+      else icon.style.color = 'var(--cat-accent)';
+    }
+  }
+
+  if (id === 'orders') loadOrders();
+  const ca = document.getElementById('content-area');
+  if (ca) ca.scrollTo({ top: 0, behavior: 'auto' });
 }
 
 function focusSearch() {
@@ -639,6 +874,18 @@ function showToast(message, duration = 3200) {
   setTimeout(() => { t.classList.add('removing'); setTimeout(() => t.remove(), 260); }, duration);
 }
 
+/* ── LOCATION SHEET ── */
+function openLocationSheet() {
+  document.getElementById('location-sheet').classList.remove('hidden');
+  document.getElementById('sheet-overlay').classList.remove('hidden');
+  document.body.style.overflow = 'hidden';
+}
+function closeLocationSheet() {
+  document.getElementById('location-sheet').classList.add('hidden');
+  document.getElementById('sheet-overlay').classList.add('hidden');
+  document.body.style.overflow = '';
+}
+
 /* ── FILTER SHEET ── */
 function openFilterSheet() {
   document.getElementById('filter-sheet').classList.remove('hidden');
@@ -654,18 +901,26 @@ function closeFilterSheet() {
 
 function applyFilters() {
   closeFilterSheet();
-  const minP = document.getElementById('filter-min-price').value;
-  const maxP = document.getElementById('filter-max-price').value;
-  state.filters = { min: minP ? Number(minP) : 0, max: maxP ? Number(maxP) : 99999 };
+  state.filters = {};
+  
+  const priceInput = document.querySelector('input[name="price"]:checked');
+  if (priceInput) state.filters.price = priceInput.value;
+  
+  const ratingInput = document.querySelector('input[name="rating"]:checked');
+  if (ratingInput) state.filters.rating = ratingInput.value;
+  
+  const cats = Array.from(document.querySelectorAll('input[name="cat"]:checked')).map(e=>e.value);
+  if (cats.length > 0) state.filters.cats = cats;
+
   sortAndRender();
+  renderAppliedFilters();
 }
 
 function clearFilters() {
-  document.getElementById('filter-min-price').value = '';
-  document.getElementById('filter-max-price').value = '';
-  document.querySelectorAll('input[name="diet"]').forEach(e => e.checked = false);
+  document.querySelectorAll('input[name="price"], input[name="rating"], input[name="cat"]').forEach(e => e.checked = false);
   state.filters = null;
   sortAndRender();
+  renderAppliedFilters();
   closeFilterSheet();
 }
 
